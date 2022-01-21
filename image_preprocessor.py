@@ -73,18 +73,29 @@ class Main:
             audSeg = audSeg.set_channels(1)
             # logger.debug("audioSeg size: {}".format(getsizeof(audSeg)))
             audSeg.export(out_path_wav, format="wav")
-            samplingFrequency, signalData = wavfile.read(out_path_wav)
+            sampling_frequency, signal_data = wavfile.read(out_path_wav)
 
-            plot.figure(figsize=(5,5))
-            plot.specgram(signalData,Fs=samplingFrequency,cmap='gray',)
+            len_of_signal_data = len(signal_data)
+            # Setting up the postprocessed data
+            wanted_x_size = 2 # in s
+            x_length = 30 # in s
+            wanted_signal_len = len_of_signal_data/(x_length/wanted_x_size)
+            y_inch_size = 2 #in inch
+            x_inch_size = 2 #in inch
+            dpi = 128 #in pixel
 
-            plot.axis('off')
-            plot.ylim([0,22000])
+            for i in range(int(x_length/wanted_x_size)):
+                x_data = signal_data[i:wanted_signal_len*(i+1)]
+                curr_out_path_wav = f"{out_path_wav}_{i+1}" 
+                plot.figure(figsize=(x_inch_size,y_inch_size),dpi=dpi)
+                plot.specgram(x_data,Fs=sampling_frequency,cmap='gray')
 
+                plot.axis('off')
+                plot.ylim([0,22000])
 
-            plot.savefig(re.sub(".wav",".png",os.path.join(final_path,out_path_wav)),pad_inches=0,bbox_inches='tight')
+                plot.savefig(re.sub(".wav",".png",os.path.join(final_path,curr_out_path_wav)),pad_inches=0,bbox_inches='tight')
+                plot.clf()
 
-            plot.clf()
             os.remove(out_path_wav)  
 
             self.new_files_converted += 1
