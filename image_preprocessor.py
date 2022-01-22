@@ -21,7 +21,7 @@ class Imput_Generator:
     def __init__(self, mode="production"):
         self.mode = mode
         if self.mode == "production":
-            self.audio_path = "fma_small"
+            self.audio_path = "/home/vikichan/Documents/ta_labor/fma_small"
             self.image_path = "all_files"
             self.tracks_path = "tracks_prep3.csv"
             self.genre_path = "genres_prep.csv"
@@ -58,42 +58,45 @@ class Main:
         self.onlyfiles = len([os.path.join(dp, f) for dp, dn, filenames in os.walk(self.audio_path) for f in filenames if os.path.splitext(f)[1] == '.mp3'])
         self.files_converted = 0
         self.new_files_converted = 0
+        self.WANTED_X_SIZE = 2 # in s
+        self.X_LENGTH = 30 # in s
+        self.Y_INCH_SIZE = 2 #in inch
+        self.X_INCH_SIZE = 2 #in inch
+        self.DPI = 128 #in pixel
+        self.WANTED_NUM_OF_FILES = int(self.X_LENGTH/self.WANTED_X_SIZE)
         self.start_time = time.time()
         self.last_time = time.time()
         self.main()
+
+    
 
     def image_maker(self,in_path,final_path):
         out_path = os.path.basename(os.path.basename(in_path))
         out_path_wav = re.sub(".mp3",".wav",out_path)
         out_path_png = re.sub(".mp3",".png",out_path)
 
-        if not os.path.isfile(os.path.join(final_path,out_path_png)):
+        if not os.path.isfile(out_path_wav):
             # convert wav to mp3                                                            
             audSeg = AudioSegment.from_mp3(in_path)
             audSeg = audSeg.set_channels(1)
-            # logger.debug("audioSeg size: {}".format(getsizeof(audSeg)))
             audSeg.export(out_path_wav, format="wav")
+
+        file_names = [re.sub(".wav","_{}.png".format(x+1),out_path_wav) for x in range(self.WANTED_NUM_OF_FILES)]
+        files_exist = [file for file in file_names if os.path.exists(os.path.join(final_path,file))]
+        if len(files_exist) != len(file_names):
             sampling_frequency, signal_data = wavfile.read(out_path_wav)
-
             len_of_signal_data = len(signal_data)
-            # Setting up the postprocessed data
-            wanted_x_size = 2 # in s
-            x_length = 30 # in s
-            wanted_signal_len = len_of_signal_data/(x_length/wanted_x_size)
-            y_inch_size = 2 #in inch
-            x_inch_size = 2 #in inch
-            dpi = 128 #in pixel
+            wanted_signal_len = int(len_of_signal_data/(self.X_LENGTH/self.WANTED_X_SIZE))
 
-            for i in range(int(x_length/wanted_x_size)):
-                x_data = signal_data[i:wanted_signal_len*(i+1)]
-                curr_out_path_wav = f"{out_path_wav}_{i+1}" 
-                plot.figure(figsize=(x_inch_size,y_inch_size),dpi=dpi)
+            for counter,file in enumerate(file_names):
+                x_data = signal_data[counter:wanted_signal_len*(counter+1)]
+                plot.figure(figsize=(self.X_INCH_SIZE,self.Y_INCH_SIZE),dpi=self.DPI)
                 plot.specgram(x_data,Fs=sampling_frequency,cmap='gray')
 
                 plot.axis('off')
                 plot.ylim([0,22000])
 
-                plot.savefig(re.sub(".wav",".png",os.path.join(final_path,curr_out_path_wav)),pad_inches=0,bbox_inches='tight')
+                plot.savefig(os.path.join(final_path,file),pad_inches=0,bbox_inches='tight')
                 plot.clf()
 
             os.remove(out_path_wav)  
