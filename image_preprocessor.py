@@ -1,4 +1,5 @@
 #import the pyplot and wavfile modules 
+from genericpath import exists
 import matplotlib.pyplot as plot
 from scipy.io import wavfile
 from pydub import AudioSegment
@@ -8,13 +9,22 @@ import random
 import pandas as pd
 import time
 import logging
-from  sys import getsizeof 
-# Read the wav file (mono)
+import sys
+import smtplib, ssl
 
-# PATH = "/home/vikichan/Documents/ta_labor/fma_small/000/000010.mp3"
-# PATH = "/home/vikichan/Documents/ta_labor/fma_small/000/"
-# from pympler.tracker import SummaryTracker
-
+class Email_sender:
+    def __init__(self):
+        self.port = 465  # For SSL
+        self.smtp_server = "smtp.gmail.com"
+        self.sender_email = "csunga.python.mail"  # Enter your address
+        self.receiver_email = "ujvari.csenger@gmail.com"  # Enter receiver address
+        self.password = input("Type your password and press enter: ")
+    
+    def send_mail(self,message):
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(self.smtp_server, self.port, context=context) as server:
+            server.login(self.sender_email, self.password)
+            server.sendmail(self.sender_email, self.receiver_email, message)
 
 
 class Imput_Generator:
@@ -75,14 +85,15 @@ class Main:
         out_path_wav = re.sub(".mp3",".wav",out_path)
         out_path_png = re.sub(".mp3",".png",out_path)
 
-        if not os.path.isfile(out_path_wav):
+        file_names = [re.sub(".wav","_{}.png".format(x+1),out_path_wav) for x in range(self.WANTED_NUM_OF_FILES)]
+        files_exist = [file for file in file_names if os.path.exists(os.path.join(final_path,file))]
+
+        if not os.path.exists(os.path.join(final_path,file_names[-1])):
             # convert wav to mp3                                                            
             audSeg = AudioSegment.from_mp3(in_path)
             audSeg = audSeg.set_channels(1)
             audSeg.export(out_path_wav, format="wav")
 
-        file_names = [re.sub(".wav","_{}.png".format(x+1),out_path_wav) for x in range(self.WANTED_NUM_OF_FILES)]
-        files_exist = [file for file in file_names if os.path.exists(os.path.join(final_path,file))]
         if len(files_exist) != len(file_names):
             sampling_frequency, signal_data = wavfile.read(out_path_wav)
             len_of_signal_data = len(signal_data)
@@ -98,8 +109,8 @@ class Main:
 
                 plot.savefig(os.path.join(final_path,file),pad_inches=0,bbox_inches='tight')
                 plot.clf()
-
             os.remove(out_path_wav)  
+
 
             self.new_files_converted += 1
             self.files_converted += 1
@@ -171,8 +182,13 @@ if __name__ == '__main__':
     handler.setFormatter(Formatter())
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
-
+    es = Email_sender()
     IG = Imput_Generator(mode = "production")
-    M = Main(IG.audio_path,IG.image_path,IG.tracks_path,IG.genre_path)
+    try:
+        M = Main(IG.audio_path,IG.image_path,IG.tracks_path,IG.genre_path)
+    except:
+        message = f"Error in Main: {sys.exc_info()[0]}"
+        print(message)
+        es.send_mail(str(message))
 
     # tracker.print_diff()
